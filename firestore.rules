@@ -1,0 +1,171 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+        data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 80 &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 24)) &&
+        (!('passportSeries' in data) || (data.passportSeries is string && data.passportSeries.size() <= 20)) &&
+        data.clubPoints is int && data.clubPoints >= 0 && data.clubPoints <= 10000000 &&
+        data.tierLabel is string && data.tierLabel.size() >= 1 && data.tierLabel.size() <= 30 &&
+        (!('favoriteDestinations' in data) || (
+          data.favoriteDestinations is list &&
+          data.favoriteDestinations.size() <= 20 &&
+          (data.favoriteDestinations.size() == 0 || data.favoriteDestinations[0] is string)
+        )) &&
+        (!('preferredPaymentId' in data) || (data.preferredPaymentId is string && data.preferredPaymentId.size() <= 30)) &&
+        (!('telegramUsername' in data) || (data.telegramUsername is string && data.telegramUsername.size() <= 40)) &&
+        (!('telegramChatId' in data) || data.telegramChatId is int) &&
+        (!('telegramNotificationsEnabled' in data) || data.telegramNotificationsEnabled is bool) &&
+        data.onboardingCompleted is bool &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAdminConfig(data) {
+      return data.telegramBotHandle is string && data.telegramBotHandle.size() >= 2 && data.telegramBotHandle.size() <= 40 &&
+        data.telegramWebhookConfigured is bool &&
+        (!('maintenanceNotice' in data) || (data.maintenanceNotice is string && data.maintenanceNotice.size() <= 240)) &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidBooking(data) {
+      return data.pnrCode is string && data.pnrCode.size() >= 2 && data.pnrCode.size() <= 20 &&
+        data.ticketNumber is string && data.ticketNumber.size() >= 2 && data.ticketNumber.size() <= 30 &&
+        data.modeName is string && data.modeName in ['FLIGHTS', 'RAIL', 'HOTELS', 'TRANSFERS', 'TOURS', 'ESIM'] &&
+        data.carrier is string && data.carrier.size() >= 1 && data.carrier.size() <= 60 &&
+        data.carrierCode is string && data.carrierCode.size() >= 1 && data.carrierCode.size() <= 30 &&
+        data.originCode is string && data.originCode.size() >= 1 && data.originCode.size() <= 10 &&
+        data.originCity is string && data.originCity.size() >= 1 && data.originCity.size() <= 50 &&
+        data.destinationCode is string && data.destinationCode.size() >= 1 && data.destinationCode.size() <= 10 &&
+        data.destinationCity is string && data.destinationCity.size() >= 1 && data.destinationCity.size() <= 50 &&
+        data.departureTime is string && data.departureTime.size() >= 1 && data.departureTime.size() <= 20 &&
+        data.arrivalTime is string && data.arrivalTime.size() >= 1 && data.arrivalTime.size() <= 20 &&
+        data.travelDate is string && data.travelDate.size() >= 1 && data.travelDate.size() <= 30 &&
+        data.durationText is string && data.durationText.size() >= 1 && data.durationText.size() <= 30 &&
+        data.fareClass is string && data.fareClass.size() >= 1 && data.fareClass.size() <= 40 &&
+        data.seatNumber is string && data.seatNumber.size() >= 1 && data.seatNumber.size() <= 30 &&
+        data.platformOrGate is string && data.platformOrGate.size() >= 1 && data.platformOrGate.size() <= 40 &&
+        data.passengerName is string && data.passengerName.size() >= 1 && data.passengerName.size() <= 80 &&
+        data.passportSeries is string && data.passportSeries.size() >= 1 && data.passportSeries.size() <= 24 &&
+        (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 24)) &&
+        data.paymentMethod is string && data.paymentMethod.size() >= 1 && data.paymentMethod.size() <= 60 &&
+        data.totalUzs is int && data.totalUzs >= 0 && data.totalUzs <= 1000000000 &&
+        data.statusName is string && data.statusName in ['CONFIRMED', 'PRIORITY', 'DELAYED', 'CANCELLED', 'CHECKED_IN'] &&
+        (!('baggageInfo' in data) || (data.baggageInfo is string && data.baggageInfo.size() <= 80)) &&
+        data.isCompleted is bool &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /adminConfig/{configId} {
+      allow get, list: if isAdmin() && isValidId(configId);
+      allow create, update: if isAdmin() &&
+        isValidId(configId) &&
+        incoming().keys().hasAll(['telegramBotHandle', 'telegramWebhookConfigured', 'updatedAt']) &&
+        incoming().keys().hasOnly(['telegramBotHandle', 'telegramWebhookConfigured', 'maintenanceNotice', 'updatedAt']) &&
+        isValidAdminConfig(incoming());
+      allow delete: if isAdmin() && isValidId(configId);
+    }
+
+    match /users/{userId} {
+      allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
+      allow list: if isOwner(userId) || isAdmin();
+
+      allow create: if isOwner(userId) &&
+        isValidId(userId) &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasAll([
+          'userId', 'fullName', 'clubPoints', 'tierLabel',
+          'onboardingCompleted', 'createdAt', 'updatedAt'
+        ]) &&
+        incoming().keys().hasOnly([
+          'userId', 'fullName', 'phone', 'passportSeries',
+          'clubPoints', 'tierLabel', 'favoriteDestinations',
+          'preferredPaymentId', 'telegramUsername', 'telegramNotificationsEnabled',
+          'onboardingCompleted', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidUserProfile(incoming());
+
+      allow update: if isOwner(userId) &&
+        isValidId(userId) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        isValidUserProfile(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'fullName', 'phone', 'passportSeries', 'clubPoints', 'tierLabel',
+          'favoriteDestinations', 'preferredPaymentId',
+          'telegramUsername', 'telegramNotificationsEnabled',
+          'onboardingCompleted', 'updatedAt'
+        ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /bookings/{bookingId} {
+        allow get: if (isOwner(userId) || isAdmin()) && isValidId(bookingId);
+        allow list: if isOwner(userId) || isAdmin();
+
+        allow create: if isOwner(userId) &&
+          isValidId(bookingId) &&
+          incoming().keys().hasAll([
+            'pnrCode', 'ticketNumber', 'modeName', 'carrier', 'carrierCode',
+            'originCode', 'originCity', 'destinationCode', 'destinationCity',
+            'departureTime', 'arrivalTime', 'travelDate', 'durationText',
+            'fareClass', 'seatNumber', 'platformOrGate', 'passengerName',
+            'passportSeries', 'paymentMethod', 'totalUzs', 'statusName',
+            'isCompleted', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'pnrCode', 'ticketNumber', 'modeName', 'carrier', 'carrierCode',
+            'originCode', 'originCity', 'destinationCode', 'destinationCity',
+            'departureTime', 'arrivalTime', 'travelDate', 'durationText',
+            'fareClass', 'seatNumber', 'platformOrGate', 'passengerName',
+            'passportSeries', 'phoneNumber', 'paymentMethod', 'totalUzs',
+            'statusName', 'baggageInfo', 'isCompleted', 'createdAt', 'updatedAt'
+          ]) &&
+          isValidBooking(incoming());
+
+        allow update: if isOwner(userId) &&
+          isValidId(bookingId) &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().pnrCode == existing().pnrCode &&
+          existing().statusName != 'CANCELLED' &&
+          isValidBooking(incoming()) &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'statusName', 'isCompleted', 'seatNumber', 'updatedAt'
+          ]);
+
+        allow delete: if isOwner(userId) && isValidId(bookingId);
+      }
+    }
+  }
+}

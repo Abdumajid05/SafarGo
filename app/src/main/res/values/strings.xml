@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">SafarGo</string>
+    <string name="brand_tagline">Central Asia Mobility</string>
+    <string name="cd_safargo_logo">SafarGo logo</string>
+    <string name="cd_swap_routes">Swap origin and destination</string>
+    <string name="cd_back">Navigate back</string>
+    <string name="cd_currency_toggle">Switch display currency</string>
+    <string name="cd_theme_toggle">Toggle dark appearance</string>
+    <string name="cd_boarding_qr">Scannable boarding pass QR code</string>
+</resources>

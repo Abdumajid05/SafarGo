@@ -1,0 +1,6 @@
+{
+  "name": "SafarGo",
+  "description": "SafarGo Modern Indigo & Sky commercial travel super-app for Uzbekistan and Central Asia: flights, Afrosiyob high-speed rail, hotels, intercity transfers, seat maps, and local payment rails.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

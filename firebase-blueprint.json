@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "SafarGo registered traveler profile, SafarGo Club points balance, and saved preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID" },
+        "fullName": { "type": "string", "description": "Traveler display name" },
+        "phone": { "type": "string", "description": "Uzbekistan or international phone number" },
+        "passportSeries": { "type": "string", "description": "Passport or ID series" },
+        "clubPoints": { "type": "integer", "description": "SafarGo Club loyalty points balance" },
+        "tierLabel": { "type": "string", "description": "Loyalty membership tier" },
+        "favoriteDestinations": { "type": "array", "description": "Bounded list of saved destination codes" },
+        "preferredPaymentId": { "type": "string", "description": "Preferred regional payment gateway ID" },
+        "telegramUsername": { "type": "string", "description": "Linked Telegram @username for user preference" },
+        "telegramChatId": { "type": "integer", "description": "Server-assigned Telegram chat ID if webhook linked" },
+        "telegramNotificationsEnabled": { "type": "boolean", "description": "User opt-in for Telegram ticket alerts when server webhook is enabled" },
+        "onboardingCompleted": { "type": "boolean", "description": "Whether initial registration details were submitted" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update" }
+      },
+      "required": ["userId", "fullName", "clubPoints", "tierLabel", "onboardingCompleted", "createdAt", "updatedAt"]
+    },
+    "AdminSystemConfig": {
+      "title": "AdminSystemConfig",
+      "description": "Server-claim-restricted configuration for verified administrators (requires Firebase Auth custom claim admin == true)",
+      "type": "object",
+      "properties": {
+        "telegramBotHandle": { "type": "string" },
+        "telegramWebhookConfigured": { "type": "boolean" },
+        "maintenanceNotice": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["telegramBotHandle", "telegramWebhookConfigured", "updatedAt"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "User-owned flight, Afrosiyob rail, hotel, tour, eSIM, or transfer booking",
+      "type": "object",
+      "properties": {
+        "pnrCode": { "type": "string" },
+        "ticketNumber": { "type": "string" },
+        "modeName": { "type": "string" },
+        "carrier": { "type": "string" },
+        "carrierCode": { "type": "string" },
+        "originCode": { "type": "string" },
+        "originCity": { "type": "string" },
+        "destinationCode": { "type": "string" },
+        "destinationCity": { "type": "string" },
+        "departureTime": { "type": "string" },
+        "arrivalTime": { "type": "string" },
+        "travelDate": { "type": "string" },
+        "durationText": { "type": "string" },
+        "fareClass": { "type": "string" },
+        "seatNumber": { "type": "string" },
+        "platformOrGate": { "type": "string" },
+        "passengerName": { "type": "string" },
+        "passportSeries": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "totalUzs": { "type": "integer" },
+        "statusName": { "type": "string" },
+        "baggageInfo": { "type": "string" },
+        "isCompleted": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["pnrCode", "ticketNumber", "modeName", "carrier", "originCode", "destinationCode", "totalUzs", "statusName", "isCompleted", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Registered SafarGo user profile and SafarGo Club balance"
+    },
+    "/users/{userId}/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "User's booked tickets, check-in status, and boarding passes"
+    },
+    "/adminConfig/{configId}": {
+      "schema": { "$ref": "#/entities/AdminSystemConfig" },
+      "description": "Admin-only system config protected by request.auth.token.admin == true custom claim"
+    }
+  }
+}
